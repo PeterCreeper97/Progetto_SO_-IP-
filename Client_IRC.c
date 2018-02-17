@@ -11,7 +11,7 @@
 #include <pthread.h>
 
 #define General_Size 50
-#define Message_Size1024
+#define Message_Size 1024
 #define DATI 3
 
 /*************************************************************************************/
