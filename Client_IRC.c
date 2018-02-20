@@ -10,39 +10,39 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define General_Size 50
-#define Message_Size 1024
+#define GENERAL_SIZE 50
+#define MESSAGE_SIZE 1024
+#define BUFFER 512
 #define DATI 3
 
 /*************************************************************************************/
 
-void *funzione_thread_pong(void *arg){
+void *funzione_thread_lettura(void *arg){
 
-        char buffer[4+1];
-        char PONG[]="PONG";
-        char indirizzo_server[General_Size+1];
+        char buffer[BUFFER];
+        char PONG[]="PONG\n";
+        char indirizzo_server[GENERAL_SIZE+1];
         int socket_id;
         
         socket_id=*(int*)arg;
 
         while(1){
-        
-                if(read(socket_id, &buffer, 4+1)==-1){
+                
+                if(read(socket_id, &buffer, BUFFER)==-1){
                 
                         perror("Errore relativo alla lettura sulla socket.\n");
                         exit(EXIT_FAILURE);
                 
                 }
                 
-                if(strcmp(buffer, "PING")==0){
+                if(strstr(buffer, "PING")!=NULL){
                         
                         write(socket_id, &PONG, strlen(PONG));
-                
-                }
                 
         }
         
    }
+ }
    
    
 /*******************************************************************************************/
@@ -50,9 +50,9 @@ void *funzione_thread_pong(void *arg){
 void Inserisci_Credenziali(int socket_id){
 
         ////////////////////////////////////////
-        char NICK[General_Size+1];  char nick[General_Size+1];
-        char USER[General_Size+1];  char user[General_Size+1];
-        char PASS[General_Size+1];  char pass[General_Size+1];
+        char NICK[GENERAL_SIZE+1];  char nick[GENERAL_SIZE+1];
+        char USER[GENERAL_SIZE+1];  char user[GENERAL_SIZE+1];
+        char PASS[GENERAL_SIZE+1];  char pass[GENERAL_SIZE+1];
         ////////////////////////////////////////
 
         printf("Inserisci le credenziali.\n");
@@ -70,24 +70,27 @@ void Inserisci_Credenziali(int socket_id){
                 write(socket_id, &PASS, strlen(PASS));
                 write(socket_id, &NICK, strlen(NICK));
                 write(socket_id, &USER, strlen(USER));
+
                 fflush(stdout);                      
 
 }
 
 void Join_Channel(int socket_id, char channel[]){
 
-        char CHANNEL[General_Size+1];
+        char CHANNEL[GENERAL_SIZE+1];
         int channel_len;
-
-        sprintf(CHANNEL, "JOIN #%s", channel);
+        
+        memset(CHANNEL, '\0', GENERAL_SIZE+1);
+        
+        sprintf(CHANNEL, "JOIN #%s\n", channel);
         
         write(socket_id, &CHANNEL, strlen(CHANNEL));
-
+           
 }
 
 void Part_Channel(int socket_id, char channel[]){
 
-        char CHANNEL[General_Size+1];
+        char CHANNEL[GENERAL_SIZE+1];
         int channel_len;
 
         sprintf(CHANNEL, "PART #%s\n", channel);
@@ -101,16 +104,32 @@ void Part_Channel(int socket_id, char channel[]){
 
 void Messaggio_Privato(int socket_id, char channel[]){
 
-        char mittente[General_Size+1];
-        char messaggio[Message_Size+1];
-        char MESSAGE[General_Size+Message_Size];
+        char destinatario[GENERAL_SIZE+1];
+        char messaggio[MESSAGE_SIZE+1];
+        char MESSAGE[GENERAL_SIZE+MESSAGE_SIZE];
 
-        printf("Mittente: ");
-        scanf("%s", mittente);
+        printf("Destinatario: ");
+        scanf("%s", destinatario);
         printf("[Messaggio]: ");
         scanf(" %[^\n]s", messaggio);
         
-         sprintf(MESSAGE, "CPRIVMSG #%s : %s\n", channel, messaggio);
+         sprintf(MESSAGE, "CPRIVMSG %s #%s :%s", destinatario, channel, messaggio);
+         
+         printf("%s", MESSAGE);
+         
+         write(socket_id, &MESSAGE, strlen(MESSAGE));
+
+}
+
+void Messaggio_Pubblico(int socket_id, char channel[]){
+
+        char messaggio[MESSAGE_SIZE+1];
+        char MESSAGE[GENERAL_SIZE+MESSAGE_SIZE];
+
+        printf("[Messaggio]: ");
+        scanf(" %[^\n]s", messaggio);
+        
+         sprintf(MESSAGE, "PRIVMSG #%s :%s\n", channel, messaggio);
          
          write(socket_id, &MESSAGE, strlen(MESSAGE));
 
@@ -120,7 +139,7 @@ void Messaggio_Privato(int socket_id, char channel[]){
 void Menu(int socket_id){
 
         int scelta=10, controllo=0;
-       char channel[General_Size+1];
+       char channel[GENERAL_SIZE+1];
         
         pthread_t thread_lettura;
         
@@ -140,25 +159,12 @@ void Menu(int socket_id){
                                 case 1:
                                         
                                         printf("Inserisci il nome del canale a cui accedere: ");
-                                        scanf(" %[^\n]s", channel);
+                                        scanf("%s", channel);   
                                         Join_Channel(socket_id, channel);
-                                        
-                                        if(controllo==0){
-                                                if(pthread_create(&thread_lettura, NULL, funzione_thread_lettura, (void *)&socket_id)){
-                                        
-                                                           perror("Errore nella crazione del thread_lettura.\n");
-                                                           exit(EXIT_FAILURE);
-                                        
-                                                }
-                                        
-                                        }
-                                        
-                                        controllo=1;
-                                        
                                         break;
                         
                                 case 2:
-                                        
+                                
                                         Part_Channel(socket_id, channel);
                                         break;
                                         
@@ -167,7 +173,11 @@ void Menu(int socket_id){
                                         Messaggio_Privato(socket_id, channel);
                                         break;
                                                                                 
+                                case 4:
                                 
+                                        Messaggio_Pubblico(socket_id, channel);
+                                        break;
+                                        
                                 default:
                                 
                                         printf("Operazione inesistente.\n");
@@ -185,10 +195,10 @@ int main(int argc, char *argv[]){
 
         int socket_id, client_len, n_byte;
         int i;
-       char buffer[SIZE+1];
-       char indirizzo_server[General_Size+1];
+       char buffer[GENERAL_SIZE+1];
+       char indirizzo_server[GENERAL_SIZE+1];
 
-        pthread_t thread_pong;
+        pthread_t thread_lettura;
        
         struct hostent *hp;
         struct sockaddr_in addr_client;
@@ -224,7 +234,7 @@ int main(int argc, char *argv[]){
           
          Inserisci_Credenziali(socket_id);
 
-         pthread_create(&thread_pong, NULL, funzione_thread_pong, (void *)&socket_id);
+         pthread_create(&thread_lettura, NULL, funzione_thread_lettura, (void *)&socket_id);
          
          printf("Credenziali inserite.\n");
       
@@ -233,27 +243,13 @@ int main(int argc, char *argv[]){
      
        ///////////////////////////////////////////////
      
-        pthread_cancel(thread_pong);
+        pthread_cancel(thread_lettura);
 
          close(socket_id);
          
          exit(EXIT_SUCCESS);
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
