@@ -1,0 +1,2 @@
+irc.freenode.net
+6667
